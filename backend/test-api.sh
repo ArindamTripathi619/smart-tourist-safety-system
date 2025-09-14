@@ -23,9 +23,24 @@ echo ""
 
 # Test registration endpoint (will show database connection status)
 echo "2. Testing Registration Endpoint:"
-curl -s -X POST http://localhost:5000/api/auth/register \
+REGISTER_RESPONSE=$(curl -s -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"name":"Test User","email":"test@example.com","password":"password123","phone":"1234567890"}' | head -c 300
+  -d '{"name":"Test User","email":"test@example.com","password":"password123","phone":"1234567890"}')
+echo "$REGISTER_RESPONSE"
+echo ""
+
+# Extract token from registration response for login test
+TOKEN=$(echo "$REGISTER_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+echo "3. Testing Login Endpoint:"
+curl -s -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+echo ""
+echo ""
+
+echo "4. Testing Get All Users:"
+curl -s http://localhost:5000/api/auth/users
 echo ""
 echo ""
 

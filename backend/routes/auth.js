@@ -1,12 +1,17 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const memoryStore = require('../utils/memoryStore');
 
 const router = express.Router();
 
 // JWT Secret (in production, use environment variable)
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+
+// Check if we should use in-memory store (when MongoDB is not available)
+let useMemoryStore = false;
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -34,8 +39,19 @@ router.post('/register', [
 
     const { name, email, password, phone, role = 'tourist' } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Try MongoDB first, fallback to memory store
+    let existingUser;
+    let savedUser;
+    
+    try {
+      // Try MongoDB
+      existingUser = await User.findOne({ email });
+    } catch (mongoError) {
+      console.log('📊 MongoDB not available, using in-memory store for demo');
+      useMemoryStore = true;
+      existingUser = await memoryStore.findOne({ email });
+    }
+
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -43,39 +59,55 @@ router.post('/register', [
       });
     }
 
-    // Create new user
-    const user = new User({
-      name,
-      email,
-      password, // Will be hashed by pre-save middleware
-      phone,
-      role
-    });
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     // Generate digital ID
-    user.generateDigitalId();
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const digitalId = `TID${timestamp}${random}`;
 
-    // Save user
-    await user.save();
+    const userData = {
+      name,
+      email,
+      password: hashedPassword,
+      phone,
+      role,
+      digitalId
+    };
+
+    if (useMemoryStore) {
+      // Use in-memory store
+      savedUser = await memoryStore.save(userData);
+    } else {
+      // Use MongoDB
+      const user = new User(userData);
+      user.generateDigitalId();
+      savedUser = await user.save();
+    }
 
     // Generate JWT token
-    const token = generateToken(user._id);
+    const token = generateToken(savedUser.id || savedUser._id);
 
     // Return user data (without password)
-    const userData = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      digitalId: user.digitalId
+    const responseUser = {
+      id: savedUser.id || savedUser._id,
+      name: savedUser.name,
+      email: savedUser.email,
+      phone: savedUser.phone,
+      role: savedUser.role,
+      digitalId: savedUser.digitalId
     };
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: useMemoryStore ? 
+        'User registered successfully (using demo mode - no database)' : 
+        'User registered successfully',
       token,
-      user: userData
+      user: responseUser,
+      demo: useMemoryStore
     });
 
   } catch (error) {
@@ -106,8 +138,16 @@ router.post('/login', [
 
     const { email, password } = req.body;
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    // Try to find user (MongoDB or memory store)
+    let user;
+    try {
+      user = await User.findOne({ email });
+    } catch (mongoError) {
+      console.log('📊 Using in-memory store for login');
+      useMemoryStore = true;
+      user = await memoryStore.findOne({ email });
+    }
+
     if (!user) {
       return res.status(400).json({
         success: false,
@@ -116,7 +156,15 @@ router.post('/login', [
     }
 
     // Check password
-    const isPasswordValid = await user.comparePassword(password);
+    let isPasswordValid;
+    if (useMemoryStore) {
+      // For in-memory store, compare with bcrypt
+      isPasswordValid = await bcrypt.compare(password, user.password);
+    } else {
+      // For MongoDB, use the model method
+      isPasswordValid = await user.comparePassword(password);
+    }
+
     if (!isPasswordValid) {
       return res.status(400).json({
         success: false,
@@ -125,11 +173,11 @@ router.post('/login', [
     }
 
     // Generate JWT token
-    const token = generateToken(user._id);
+    const token = generateToken(user.id || user._id);
 
     // Return user data (without password)
     const userData = {
-      id: user._id,
+      id: user.id || user._id,
       name: user.name,
       email: user.email,
       phone: user.phone,
@@ -141,7 +189,8 @@ router.post('/login', [
       success: true,
       message: 'Login successful',
       token,
-      user: userData
+      user: userData,
+      demo: useMemoryStore
     });
 
   } catch (error) {
@@ -189,6 +238,43 @@ router.get('/me', async (req, res) => {
     res.status(401).json({
       success: false,
       message: 'Token is not valid'
+    });
+  }
+});
+
+// @route   GET /api/auth/users
+// @desc    Get all users (for testing/demo purposes)
+// @access  Public (in production, make this admin-only)
+router.get('/users', async (req, res) => {
+  try {
+    let users;
+    
+    if (useMemoryStore) {
+      users = memoryStore.getAllUsers();
+    } else {
+      users = await User.find({}).select('-password');
+    }
+
+    res.json({
+      success: true,
+      count: users.length,
+      users: users.map(user => ({
+        id: user.id || user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        digitalId: user.digitalId,
+        createdAt: user.createdAt
+      })),
+      demo: useMemoryStore
+    });
+
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching users'
     });
   }
 });
