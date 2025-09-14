@@ -4,8 +4,15 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
 
+// Import database connection and routes
+const connectDB = require('./config/database');
+const authRoutes = require('./routes/auth');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Connect to database
+connectDB();
 
 // Middleware
 app.use(helmet());
@@ -24,6 +31,8 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -32,15 +41,13 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// User routes (placeholder)
+// Legacy routes (remove these once new auth routes are working)
 app.post('/api/auth/register', (req, res) => {
-  // TODO: Implement user registration
-  res.json({ message: 'User registration endpoint - Coming soon!' });
+  res.json({ message: 'Use POST /api/auth/register instead' });
 });
 
 app.post('/api/auth/login', (req, res) => {
-  // TODO: Implement user login
-  res.json({ message: 'User login endpoint - Coming soon!' });
+  res.json({ message: 'Use POST /api/auth/login instead' });
 });
 
 // Tourist routes (placeholder)
