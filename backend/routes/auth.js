@@ -59,31 +59,37 @@ router.post('/register', [
       });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
     // Generate digital ID
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 10000);
     const digitalId = `TID${timestamp}${random}`;
 
-    const userData = {
-      name,
-      email,
-      password: hashedPassword,
-      phone,
-      role,
-      digitalId
-    };
-
     if (useMemoryStore) {
-      // Use in-memory store
+      // For in-memory store, we need to hash manually
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      
+      const userData = {
+        name,
+        email,
+        password: hashedPassword,
+        phone,
+        role,
+        digitalId
+      };
+      
       savedUser = await memoryStore.save(userData);
     } else {
-      // Use MongoDB
-      const user = new User(userData);
-      user.generateDigitalId();
+      // For MongoDB, let the model handle password hashing
+      const user = new User({
+        name,
+        email,
+        password, // Don't hash here - let the model do it
+        phone,
+        role,
+        digitalId
+      });
+      
       savedUser = await user.save();
     }
 
@@ -137,6 +143,7 @@ router.post('/login', [
     }
 
     const { email, password } = req.body;
+    console.log('Login attempt:', { email, passwordLength: password.length });
 
     // Try to find user (MongoDB or memory store)
     let user;
@@ -149,21 +156,28 @@ router.post('/login', [
     }
 
     if (!user) {
+      console.log('User not found:', email);
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
+    console.log('User found:', { id: user.id || user._id, email: user.email });
+
     // Check password
     let isPasswordValid;
     if (useMemoryStore) {
       // For in-memory store, compare with bcrypt
+      console.log('Comparing password with bcrypt (memory store)');
       isPasswordValid = await bcrypt.compare(password, user.password);
     } else {
       // For MongoDB, use the model method
+      console.log('Comparing password with model method (MongoDB)');
       isPasswordValid = await user.comparePassword(password);
     }
+
+    console.log('Password valid:', isPasswordValid);
 
     if (!isPasswordValid) {
       return res.status(400).json({

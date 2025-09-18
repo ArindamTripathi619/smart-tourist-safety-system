@@ -134,3 +134,27 @@ ios/build/
 *.p8
 *.p12
 *.mobileprovision
+
+# React Native specific
+mobile/TouristSafetyApp/node_modules/
+mobile/TouristSafetyApp/android/app/build/
+mobile/TouristSafetyApp/android/build/
+mobile/TouristSafetyApp/android/gradle/
+mobile/TouristSafetyApp/android/.gradle/
+mobile/TouristSafetyApp/ios/build/
+mobile/TouristSafetyApp/ios/Pods/
+mobile/TouristSafetyApp/ios/Podfile.lock
+mobile/TouristSafetyApp/ios/*.xcworkspace/
+mobile/TouristSafetyApp/ios/*.xcodeproj/
+mobile/TouristSafetyApp/.bundle/
+mobile/TouristSafetyApp/metro.config.js.bak
+mobile/TouristSafetyApp/.watchmanconfig
+
+# Android
+mobile/TouristSafetyApp/android/app/release/
+mobile/TouristSafetyApp/android/app/debug/
+mobile/TouristSafetyApp/android/keystores/
+mobile/TouristSafetyApp/android/local.properties
+
+# iOS
+mobile/TouristSafetyApp/ios/DerivedData/
