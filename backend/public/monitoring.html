@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tourist Safety - Real-time Monitoring</title>
     <script src="/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; }
@@ -15,6 +17,8 @@
         .stat-number { font-size: 2em; font-weight: bold; color: #3498db; }
         .emergency-alerts { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .alert { background: #e74c3c; color: white; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .map-container { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #map { height: 400px; width: 100%; border-radius: 8px; }
         .locations { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .location { padding: 10px; border-bottom: 1px solid #eee; }
         .online { color: #27ae60; }
@@ -23,6 +27,8 @@
         .connected { background: #d5f4e6; color: #27ae60; }
         .disconnected { background: #fadbd8; color: #e74c3c; }
         .log { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; margin-top: 20px; }
+        .emergency-icon { background: rgba(231, 76, 60, 0.8); border-radius: 50%; border: 2px solid #e74c3c; text-align: center; line-height: 21px; font-size: 16px; }
+        .location-icon { background: rgba(52, 152, 219, 0.8); border-radius: 50%; border: 2px solid #3498db; text-align: center; line-height: 16px; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -59,6 +65,14 @@
             </div>
         </div>
 
+        <div class="map-container">
+            <h3>🗺️ Live Location Map</h3>
+            <div id="map"></div>
+            <p style="margin-top: 10px; color: #666; font-size: 14px;">
+                🔴 Red markers: Emergency alerts | 🔵 Blue markers: Tourist locations
+            </p>
+        </div>
+
         <div class="locations">
             <h3>📍 Live Tourist Locations</h3>
             <div id="location-list">
@@ -91,6 +105,85 @@
         
         let emergencyCount = 0;
         let locationsTracked = 0;
+        let map;
+        let emergencyMarkers = [];
+        let locationMarkers = [];
+
+        // Initialize map
+        function initMap() {
+            // Center on India (default location if no user locations available)
+            map = L.map('map').setView([20.5937, 78.9629], 5);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            addLog('🗺️ Map initialized');
+        }
+
+        // Add emergency marker to map
+        function addEmergencyMarker(alert) {
+            const marker = L.marker([alert.location.latitude, alert.location.longitude], {
+                icon: L.divIcon({
+                    html: '🚨',
+                    iconSize: [25, 25],
+                    className: 'emergency-icon'
+                })
+            }).addTo(map);
+            
+            marker.bindPopup(`
+                <div style="text-align: center;">
+                    <strong>🚨 EMERGENCY ALERT</strong><br>
+                    <strong>Tourist ID:</strong> ${alert.digitalId}<br>
+                    <strong>Message:</strong> ${alert.message}<br>
+                    <strong>Location:</strong> ${alert.location.latitude.toFixed(6)}, ${alert.location.longitude.toFixed(6)}<br>
+                    <strong>Time:</strong> ${new Date(alert.timestamp).toLocaleString()}
+                </div>
+            `);
+            
+            emergencyMarkers.push(marker);
+            
+            // Auto-zoom to emergency location
+            map.setView([alert.location.latitude, alert.location.longitude], 13);
+            
+            addLog(`🚨 Emergency marker added on map`);
+        }
+
+        // Add location marker to map
+        function addLocationMarker(location) {
+            // Remove old location marker for this user if exists
+            const existingMarkerIndex = locationMarkers.findIndex(m => m.digitalId === location.digitalId);
+            if (existingMarkerIndex !== -1) {
+                map.removeLayer(locationMarkers[existingMarkerIndex].marker);
+                locationMarkers.splice(existingMarkerIndex, 1);
+            }
+            
+            const marker = L.marker([location.latitude, location.longitude], {
+                icon: L.divIcon({
+                    html: '📍',
+                    iconSize: [20, 20],
+                    className: 'location-icon'
+                })
+            }).addTo(map);
+            
+            marker.bindPopup(`
+                <div style="text-align: center;">
+                    <strong>📍 Tourist Location</strong><br>
+                    <strong>Tourist ID:</strong> ${location.digitalId}<br>
+                    <strong>Coordinates:</strong> ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}<br>
+                    <strong>Accuracy:</strong> ${location.accuracy || 'N/A'}m<br>
+                    <strong>Updated:</strong> ${new Date().toLocaleString()}
+                </div>
+            `);
+            
+            locationMarkers.push({
+                digitalId: location.digitalId,
+                marker: marker
+            });
+            
+            addLog(`📍 Location marker updated on map`);
+        }
 
         function addLog(message) {
             const timestamp = new Date().toLocaleTimeString();
@@ -153,6 +246,9 @@
             locationsTracked++;
             document.getElementById('locations-tracked').textContent = locationsTracked;
             
+            // Add marker to map
+            addLocationMarker(location);
+            
             const locationList = document.getElementById('location-list');
             const locationDiv = document.createElement('div');
             locationDiv.className = 'location';
@@ -180,6 +276,9 @@
             emergencyCount++;
             document.getElementById('emergency-count').textContent = emergencyCount;
             
+            // Add emergency marker to map
+            addEmergencyMarker(alert);
+            
             const alertList = document.getElementById('emergency-list');
             const alertDiv = document.createElement('div');
             alertDiv.className = 'alert';
@@ -189,6 +288,7 @@
                 Location: ${alert.location.latitude.toFixed(6)}, ${alert.location.longitude.toFixed(6)}<br>
                 Message: ${alert.message}<br>
                 Time: ${new Date(alert.timestamp).toLocaleString()}
+                <br><small style="opacity: 0.8;">📍 Location marked on map above</small>
             `;
             
             if (alertList.firstChild && alertList.firstChild.tagName !== 'DIV') {
@@ -216,6 +316,11 @@
         if ('Notification' in window) {
             Notification.requestPermission();
         }
+
+        // Initialize map when page loads
+        window.addEventListener('load', () => {
+            initMap();
+        });
 
         addLog('🚀 Real-time monitoring dashboard initialized');
         addLog('Waiting for tourist connections...');
