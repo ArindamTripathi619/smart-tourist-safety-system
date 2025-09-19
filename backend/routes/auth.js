@@ -23,9 +23,10 @@ const generateToken = (userId) => {
 // @access  Public
 router.post('/register', [
   body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
-  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('email').isEmail().withMessage('Please enter a valid email'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('phone').isMobilePhone().withMessage('Please provide a valid phone number')
+  body('phone').trim().isLength({ min: 10 }).withMessage('Phone number must be at least 10 characters'),
+  body('emergencyContact').trim().isLength({ min: 10 }).withMessage('Emergency contact must be at least 10 characters'),
 ], async (req, res) => {
   try {
     // Check for validation errors
@@ -37,7 +38,7 @@ router.post('/register', [
       });
     }
 
-    const { name, email, password, phone, role = 'tourist' } = req.body;
+    const { name, email, password, phone, emergencyContact, role = 'tourist' } = req.body;
 
     // Try MongoDB first, fallback to memory store
     let existingUser;
@@ -74,6 +75,7 @@ router.post('/register', [
         email,
         password: hashedPassword,
         phone,
+        emergencyContact,
         role,
         digitalId
       };
@@ -86,6 +88,7 @@ router.post('/register', [
         email,
         password, // Don't hash here - let the model do it
         phone,
+        emergencyContact,
         role,
         digitalId
       });
@@ -102,8 +105,10 @@ router.post('/register', [
       name: savedUser.name,
       email: savedUser.email,
       phone: savedUser.phone,
+      emergencyContact: savedUser.emergencyContact,
       role: savedUser.role,
-      digitalId: savedUser.digitalId
+      digitalId: savedUser.digitalId,
+      createdAt: savedUser.createdAt || new Date()
     };
 
     res.status(201).json({
@@ -195,8 +200,10 @@ router.post('/login', [
       name: user.name,
       email: user.email,
       phone: user.phone,
+      emergencyContact: user.emergencyContact,
       role: user.role,
-      digitalId: user.digitalId
+      digitalId: user.digitalId,
+      createdAt: user.createdAt || user.createdAt || new Date()
     };
 
     res.json({
