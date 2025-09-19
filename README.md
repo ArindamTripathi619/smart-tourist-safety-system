@@ -118,7 +118,11 @@ node test-socket.js
 ![Admin Dashboard](screenshots/admin_dashboard.webp)
 *Professional Material-UI admin interface for real-time tourist monitoring and management*
 
-### **📱 Mobile Application Screenshots**
+### **� Real-time Monitoring Dashboard**
+![Real-time Monitoring Dashboard](screenshots/real_time_monitoring_dasborad.webp)
+*Live monitoring dashboard showing real-time tourist locations and emergency alerts with Socket.IO integration*
+
+### **�📱 Mobile Application Screenshots**
 
 #### **Authentication Screens**
 | Login Screen | Registration Screen |
