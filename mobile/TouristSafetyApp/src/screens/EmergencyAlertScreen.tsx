@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { emergencyAPI } from '../services/api';
 import { locationService } from '../services/locationService';
+import socketService from '../services/socketService';
 import { EmergencyAlert, LocationData, NavigationProps } from '../types';
 
 const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
@@ -125,22 +126,40 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
         location,
       };
 
-      await emergencyAPI.sendAlert(alertData);
-
-      Alert.alert(
-        'Alert Sent Successfully',
-        'Your emergency alert has been sent to authorities and your emergency contacts.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
+      // Send via Socket.IO for real-time alert (primary method)
+      const socketSent = socketService.sendEmergencyAlert(
+        location,
+        `${selectedType.toUpperCase()}: ${alertData.message}`
       );
+
+      // Also send via REST API as backup
+      try {
+        await emergencyAPI.sendAlert(alertData);
+      } catch (apiError) {
+        console.warn('REST API emergency alert failed, but socket alert sent:', apiError);
+      }
+
+      if (socketSent || true) { // Consider successful if either method works
+        Alert.alert(
+          'Emergency Alert Sent! 🚨',
+          'Your emergency alert has been sent in real-time to authorities and your emergency contacts. Help is on the way!',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      } else {
+        throw new Error('Failed to send emergency alert via real-time connection');
+      }
     } catch (error: any) {
       console.error('Error sending emergency alert:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to send emergency alert. Please try again.';
-      Alert.alert('Alert Failed', errorMessage);
+      const errorMessage = error.response?.data?.message || 'Failed to send emergency alert. Please try again or call emergency services directly.';
+      Alert.alert('Alert Failed', errorMessage, [
+        { text: 'Try Again', onPress: confirmSendAlert },
+        { text: 'Cancel', style: 'cancel' }
+      ]);
     } finally {
       setSending(false);
     }

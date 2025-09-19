@@ -22,6 +22,7 @@ import EmergencyAlertScreen from './src/screens/EmergencyAlertScreen';
 
 // Import services
 import { tokenManager } from './src/services/api';
+import socketService from './src/services/socketService';
 import { RootStackParamList, TabStackParamList } from './src/types';
 
 // Create navigators
@@ -135,12 +136,20 @@ const App: React.FC = () => {
       
       if (token && userData) {
         setIsAuthenticated(true);
+        
+        // Initialize Socket.IO connection with authentication token
+        await socketService.updateToken(token);
+        console.log('Socket.IO initialized with user token');
       } else {
         setIsAuthenticated(false);
+        
+        // Disconnect socket if not authenticated
+        socketService.disconnect();
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
       setIsAuthenticated(false);
+      socketService.disconnect();
     } finally {
       setLoading(false);
     }

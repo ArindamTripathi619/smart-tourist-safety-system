@@ -18,7 +18,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.8.7",
     "morgan": "^1.10.0",
-    "socket.io": "^4.7.2",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "validator": "^13.15.15"
   },
   "devDependencies": {

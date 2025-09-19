@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tourist Safety - Real-time Monitoring</title>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2em; font-weight: bold; color: #3498db; }
+        .emergency-alerts { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .alert { background: #e74c3c; color: white; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .locations { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .location { padding: 10px; border-bottom: 1px solid #eee; }
+        .online { color: #27ae60; }
+        .offline { color: #e74c3c; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .connected { background: #d5f4e6; color: #27ae60; }
+        .disconnected { background: #fadbd8; color: #e74c3c; }
+        .log { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 Tourist Safety Real-time Monitoring Dashboard</h1>
+            <p>SIH 2025 - Smart Tourist Safety System</p>
+            <div id="connection-status" class="status disconnected">🔴 Disconnected from server</div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-connected">0</div>
+                <div>Total Connected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="online-tourists">0</div>
+                <div>Online Tourists</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="emergency-count">0</div>
+                <div>Emergency Alerts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="locations-tracked">0</div>
+                <div>Locations Tracked</div>
+            </div>
+        </div>
+
+        <div class="emergency-alerts">
+            <h3>🚨 Emergency Alerts</h3>
+            <div id="emergency-list">
+                <p>No emergency alerts received</p>
+            </div>
+        </div>
+
+        <div class="locations">
+            <h3>📍 Live Tourist Locations</h3>
+            <div id="location-list">
+                <p>No location updates received</p>
+            </div>
+        </div>
+
+        <div class="log" id="log">
+            <div>Connecting to Socket.IO server...</div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io('http://localhost:5000', {
+            autoConnect: true,
+            reconnection: true,
+            timeout: 20000,
+            forceNew: true
+        });
+        const log = document.getElementById('log');
+        const connectionStatus = document.getElementById('connection-status');
+        
+        let emergencyCount = 0;
+        let locationsTracked = 0;
+
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        // Debug all Socket.IO events
+        socket.onAny((event, ...args) => {
+            addLog(`🔍 Socket event: ${event}`, args);
+        });
+
+        // Connection events
+        socket.on('connect', () => {
+            addLog('✅ Connected to server: ' + socket.id);
+            connectionStatus.innerHTML = '🟢 Connected to server';
+            connectionStatus.className = 'status connected';
+            
+            // Authenticate as admin with demo token
+            addLog('🔐 Sending authentication...');
+            socket.emit('authenticate', {
+                token: 'admin-demo-token', // Demo token now handled properly
+                userType: 'admin'
+            });
+        });
+
+        socket.on('connect_error', (error) => {
+            addLog('❌ Connection error: ' + error.message);
+            connectionStatus.innerHTML = '🔴 Connection error';
+            connectionStatus.className = 'status disconnected';
+        });
+
+        socket.on('disconnect', (reason) => {
+            addLog('❌ Disconnected from server: ' + reason);
+            connectionStatus.innerHTML = '🔴 Disconnected from server';
+            connectionStatus.className = 'status disconnected';
+        });
+
+        socket.on('authenticated', (data) => {
+            addLog('🔐 Authenticated as: ' + data.userType);
+            
+            // Request initial data
+            socket.emit('get_user_locations');
+            socket.emit('get_online_users');
+        });
+
+        socket.on('auth_error', (error) => {
+            addLog('🚫 Authentication failed: ' + error.message);
+        });
+
+        // Real-time updates
+        socket.on('user_stats', (stats) => {
+            document.getElementById('total-connected').textContent = stats.totalConnected;
+            document.getElementById('online-tourists').textContent = stats.onlineTourists;
+            addLog(`📊 Stats updated: ${stats.totalConnected} connected, ${stats.onlineTourists} tourists`);
+        });
+
+        socket.on('location_update', (location) => {
+            locationsTracked++;
+            document.getElementById('locations-tracked').textContent = locationsTracked;
+            
+            const locationList = document.getElementById('location-list');
+            const locationDiv = document.createElement('div');
+            locationDiv.className = 'location';
+            locationDiv.innerHTML = `
+                <strong>User ${location.digitalId}</strong> - 
+                ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)} 
+                <small>(Accuracy: ${location.accuracy || 'N/A'}m)</small>
+                <span style="float: right; color: #27ae60;">📍 ${new Date().toLocaleTimeString()}</span>
+            `;
+            
+            if (locationList.firstChild && locationList.firstChild.tagName !== 'DIV') {
+                locationList.innerHTML = '';
+            }
+            locationList.insertBefore(locationDiv, locationList.firstChild);
+            
+            // Keep only last 10 locations
+            if (locationList.children.length > 10) {
+                locationList.removeChild(locationList.lastChild);
+            }
+            
+            addLog(`📍 Location update: User ${location.digitalId} at ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
+        });
+
+        socket.on('emergency_alert', (alert) => {
+            emergencyCount++;
+            document.getElementById('emergency-count').textContent = emergencyCount;
+            
+            const alertList = document.getElementById('emergency-list');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert';
+            alertDiv.innerHTML = `
+                <strong>🚨 EMERGENCY ALERT</strong><br>
+                User: ${alert.digitalId}<br>
+                Location: ${alert.location.latitude.toFixed(6)}, ${alert.location.longitude.toFixed(6)}<br>
+                Message: ${alert.message}<br>
+                Time: ${new Date(alert.timestamp).toLocaleString()}
+            `;
+            
+            if (alertList.firstChild && alertList.firstChild.tagName !== 'DIV') {
+                alertList.innerHTML = '';
+            }
+            alertList.insertBefore(alertDiv, alertList.firstChild);
+            
+            // Keep only last 5 alerts
+            if (alertList.children.length > 5) {
+                alertList.removeChild(alertList.lastChild);
+            }
+            
+            addLog(`🚨 EMERGENCY ALERT: User ${alert.digitalId} - ${alert.message}`);
+            
+            // Browser notification if permission granted
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Emergency Alert!', {
+                    body: `Tourist ${alert.digitalId} needs help: ${alert.message}`,
+                    icon: '🚨'
+                });
+            }
+        });
+
+        // Request notification permission
+        if ('Notification' in window) {
+            Notification.requestPermission();
+        }
+
+        addLog('🚀 Real-time monitoring dashboard initialized');
+        addLog('Waiting for tourist connections...');
+    </script>
+</body>
+</html>

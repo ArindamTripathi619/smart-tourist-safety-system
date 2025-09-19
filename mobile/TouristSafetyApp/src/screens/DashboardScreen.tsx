@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { tokenManager } from '../services/api';
 import { locationService } from '../services/locationService';
+import socketService from '../services/socketService';
 import { User, LocationData, NavigationProps } from '../types';
 
 const { width } = Dimensions.get('window');
@@ -68,6 +69,10 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
       locationService.startLocationTracking(
         (newLocation) => {
           setLocation(newLocation);
+          
+          // Send location update to server via Socket.IO for real-time monitoring
+          socketService.sendLocationUpdate(newLocation);
+          console.log('Location sent to server:', newLocation);
         },
         (error) => {
           Alert.alert('Location Error', 'Failed to track location');
@@ -75,7 +80,13 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
         }
       );
       setIsTrackingLocation(true);
-      Alert.alert('Location Tracking', 'Location tracking started');
+      Alert.alert(
+        'Real-time Location Tracking', 
+        'Location tracking started. Your location will be shared with authorities for safety monitoring.',
+        [
+          { text: 'OK' }
+        ]
+      );
     }
   };
 

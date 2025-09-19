@@ -2,14 +2,23 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
+const { createServer } = require('http');
 require('dotenv').config();
 
 // Import database connection and routes
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
+const SocketHandler = require('./socket/socketHandler');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Create HTTP server for Socket.IO
+const server = createServer(app);
+
+// Initialize Socket.IO
+const socketHandler = new SocketHandler(server);
 
 // Connect to database
 connectDB();
@@ -20,6 +29,9 @@ app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files (for monitoring dashboard)
+app.use(express.static(require('path').join(__dirname, 'public')));
 
 // Basic route
 app.get('/', (req, res) => {
@@ -33,11 +45,17 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 
+// Socket.IO stats endpoint
+app.get('/api/socket/stats', (req, res) => {
+  res.json(socketHandler.getStats());
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    socketStats: socketHandler.getStats()
   });
 });
 
@@ -79,10 +97,11 @@ app.use('*', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Server with Socket.IO running on port ${PORT}`);
   console.log(`📱 Smart Tourist Safety System API`);
   console.log(`🌐 http://localhost:${PORT}`);
+  console.log(`🔌 WebSocket server ready for real-time connections`);
 });
 
 module.exports = app;
