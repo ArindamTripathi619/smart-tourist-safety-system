@@ -212,7 +212,18 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
                   if (smsSent) {
                     Alert.alert('Success', 'Emergency contact has been notified via SMS');
                   } else {
-                    Alert.alert('Note', 'Please manually contact your emergency contact');
+                    // If SMS failed, offer test mode
+                    Alert.alert(
+                      'SMS Failed', 
+                      'SMS not available on this device. Would you like to see what would be sent?',
+                      [
+                        { text: 'Cancel' },
+                        { 
+                          text: 'Show SMS Content', 
+                          onPress: () => emergencyContactService.testSMSFunctionality(contactData, notificationData)
+                        }
+                      ]
+                    );
                   }
                   navigation.goBack();
                 },

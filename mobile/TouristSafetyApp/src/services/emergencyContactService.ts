@@ -19,10 +19,14 @@ export interface EmergencyNotificationData {
 
 class EmergencyContactService {
   /**
-   * Send SMS to emergency contact
+   * Send SMS to emergency contact with enhanced debugging and emulator support
    */
   async sendSMS(contact: EmergencyContactData, data: EmergencyNotificationData): Promise<boolean> {
     try {
+      console.log('🔍 Starting SMS send process...');
+      console.log('📞 Contact:', contact);
+      console.log('📍 Emergency data:', data);
+
       const locationText = `${data.location.latitude.toFixed(6)}, ${data.location.longitude.toFixed(6)}`;
       const googleMapsUrl = `https://maps.google.com/?q=${data.location.latitude},${data.location.longitude}`;
       
@@ -37,18 +41,58 @@ class EmergencyContactService {
       const phoneNumber = contact.phone.replace(/\D/g, ''); // Remove non-digits
       const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(smsBody)}`;
 
+      console.log('📱 SMS URL:', smsUrl);
+      console.log('📝 SMS Body length:', smsBody.length);
+
       const canOpen = await Linking.canOpenURL(smsUrl);
+      console.log('✅ Can open SMS URL:', canOpen);
+      
       if (canOpen) {
+        console.log('🚀 Opening SMS app...');
         await Linking.openURL(smsUrl);
+        console.log('✅ SMS app opened successfully');
         return true;
       } else {
-        console.warn('SMS not supported on this device');
+        console.warn('❌ SMS not supported on this device/emulator');
+        Alert.alert(
+          'SMS Not Available',
+          'SMS functionality is not available on this device. This is common in emulators.\n\nTo test SMS:\n• Use a physical device\n• Or manually send the emergency message'
+        );
         return false;
       }
-    } catch (error) {
-      console.error('Error sending SMS:', error);
+    } catch (error: any) {
+      console.error('❌ Error sending SMS:', error);
+      Alert.alert(
+        'SMS Error', 
+        `Failed to open SMS app: ${error?.message || 'Unknown error'}\n\nThis is likely due to emulator limitations. Try on a real device.`
+      );
       return false;
     }
+  }
+
+  /**
+   * Test SMS functionality - shows what would be sent
+   */
+  testSMSFunctionality(contact: EmergencyContactData, data: EmergencyNotificationData) {
+    const locationText = `${data.location.latitude.toFixed(6)}, ${data.location.longitude.toFixed(6)}`;
+    const googleMapsUrl = `https://maps.google.com/?q=${data.location.latitude},${data.location.longitude}`;
+    
+    const smsBody = `🚨 EMERGENCY ALERT 🚨\n\n` +
+      `${data.touristName} (ID: ${data.digitalId}) needs help!\n\n` +
+      `Message: ${data.message}\n\n` +
+      `Location: ${locationText}\n` +
+      `Map: ${googleMapsUrl}\n\n` +
+      `Time: ${data.timestamp.toLocaleString()}\n\n` +
+      `This is an automated emergency notification from RakshaSetu Tourist Safety App.`;
+
+    Alert.alert(
+      '📱 SMS Test Mode',
+      `This would be sent to: ${contact.phone}\n\n${smsBody.substring(0, 200)}...`,
+      [
+        { text: 'Copy Message', onPress: () => console.log('SMS Content:', smsBody) },
+        { text: 'OK' }
+      ]
+    );
   }
 
   /**
