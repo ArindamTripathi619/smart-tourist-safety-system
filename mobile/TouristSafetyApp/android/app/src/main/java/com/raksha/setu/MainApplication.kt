@@ -1,4 +1,4 @@
-package com.touristsafetyapp
+package com.raksha.setu
 
 import android.app.Application
 import com.facebook.react.PackageList

@@ -121,7 +121,7 @@ const App: React.FC = () => {
     // Set up periodic check for auth state
     const interval = setInterval(() => {
       checkAuthStatus();
-    }, 2000); // Check every 2 seconds
+    }, 10000); // Check every 10 seconds instead of 2
     
     return () => {
       subscription?.remove();
@@ -134,13 +134,18 @@ const App: React.FC = () => {
       const token = await tokenManager.getToken();
       const userData = await tokenManager.getUserData();
       
+      console.log('Auth check - Token exists:', !!token);
+      console.log('Auth check - User data exists:', !!userData);
+      
       if (token && userData) {
+        console.log('User authenticated, initializing socket...');
         setIsAuthenticated(true);
         
         // Initialize Socket.IO connection with authentication token
         await socketService.updateToken(token);
         console.log('Socket.IO initialized with user token');
       } else {
+        console.log('User not authenticated');
         setIsAuthenticated(false);
         
         // Disconnect socket if not authenticated

@@ -26,7 +26,7 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
     startPulseAnimation();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const getCurrentLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
+  const getCurrentLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
     try {
       // First request permission
       const hasPermission = await locationService.requestLocationPermission();
@@ -36,14 +36,24 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
       }
 
       // Get current location
-      const location = await locationService.getCurrentLocation();
-      console.log('Location obtained:', location);
+      const currentLocation = await locationService.getCurrentLocation();
+      console.log('Location obtained for emergency:', currentLocation);
+      
+      // Set the location state for the component
+      const locationData = {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        accuracy: currentLocation.accuracy,
+        timestamp: new Date()
+      };
+      setLocation(locationData);
+      
       return {
-        latitude: location.latitude,
-        longitude: location.longitude,
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
       };
     } catch (error: any) {
-      console.error('Error getting location:', error);
+      console.error('Error getting location for emergency:', error);
       
       // Provide user-friendly error messages
       let errorMessage = 'Unable to get location';
@@ -116,8 +126,15 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
   };
 
   const confirmSendAlert = async () => {
-    if (!location) return;
+    console.log('🚨 Emergency alert confirmation started');
+    console.log('📍 Location available:', !!location);
+    
+    if (!location) {
+      console.log('❌ No location available for emergency alert');
+      return;
+    }
 
+    console.log('🔒 Setting sending state...');
     setSending(true);
     try {
       const alertData: EmergencyAlert = {
@@ -126,11 +143,17 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
         location,
       };
 
+      console.log('📨 Sending emergency alert via Socket.IO...');
+      console.log('📍 Alert location:', location);
+      console.log('💬 Alert message:', `${selectedType.toUpperCase()}: ${alertData.message}`);
+
       // Send via Socket.IO for real-time alert (primary method)
       const socketSent = socketService.sendEmergencyAlert(
         location,
         `${selectedType.toUpperCase()}: ${alertData.message}`
       );
+
+      console.log('🔌 Socket.IO emergency alert sent:', socketSent);
 
       // Also send via REST API as backup
       try {

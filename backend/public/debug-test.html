@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Socket Test - Detailed Debug</title>
+    <script src="/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Socket.IO Connection Test - Detailed Debug</h1>
+    <div id="status">Loading...</div>
+    <div id="logs" style="background: #f0f0f0; padding: 10px; margin-top: 20px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto;"></div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}\n`;
+            logsDiv.textContent += logMessage;
+            console.log(logMessage);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        // Test basic fetch first
+        async function testBasicConnection() {
+            try {
+                log('🧪 Testing basic HTTP connection...');
+                const response = await fetch('/');
+                const data = await response.json();
+                log('✅ Basic HTTP works: ' + JSON.stringify(data));
+            } catch (error) {
+                log('❌ Basic HTTP failed: ' + error.message);
+            }
+        }
+
+        // Test Socket.IO library loading
+        function testSocketIOLibrary() {
+            try {
+                log('🧪 Testing Socket.IO library...');
+                if (typeof io === 'undefined') {
+                    throw new Error('Socket.IO library not loaded');
+                }
+                log('✅ Socket.IO library loaded: ' + typeof io);
+                log('✅ Socket.IO version: ' + (io.version || 'unknown'));
+                return true;
+            } catch (error) {
+                log('❌ Socket.IO library error: ' + error.message);
+                return false;
+            }
+        }
+
+        // Test Socket.IO connection
+        function testSocketConnection() {
+            try {
+                log('🧪 Creating Socket.IO connection...');
+                statusDiv.textContent = 'Creating socket...';
+                
+                const socket = io({
+                    autoConnect: false, // Don't auto-connect yet
+                    forceNew: true,
+                    transports: ['polling'],
+                    timeout: 5000
+                });
+                
+                log('✅ Socket instance created: ' + socket.id);
+                
+                // Add all event listeners first
+                socket.on('connect', () => {
+                    log('✅ CONNECTED! Socket ID: ' + socket.id);
+                    statusDiv.textContent = '🟢 Connected';
+                    statusDiv.style.color = 'green';
+                });
+                
+                socket.on('disconnect', (reason) => {
+                    log('❌ Disconnected: ' + reason);
+                    statusDiv.textContent = '🔴 Disconnected';
+                    statusDiv.style.color = 'red';
+                });
+                
+                socket.on('connect_error', (error) => {
+                    log('❌ Connection error: ' + error.message);
+                    log('❌ Error type: ' + error.type);
+                    log('❌ Error description: ' + error.description);
+                    statusDiv.textContent = '🔴 Connection Error';
+                    statusDiv.style.color = 'red';
+                });
+                
+                // Log all events
+                socket.onAny((eventName, ...args) => {
+                    log(`📨 Event: ${eventName} - ${JSON.stringify(args).substring(0, 200)}`);
+                });
+                
+                log('🚀 Starting connection...');
+                statusDiv.textContent = 'Connecting...';
+                socket.connect();
+                
+            } catch (error) {
+                log('❌ Socket creation error: ' + error.message);
+                statusDiv.textContent = '🔴 Creation Error';
+                statusDiv.style.color = 'red';
+            }
+        }
+
+        // Run tests sequentially
+        async function runAllTests() {
+            log('🚀 Starting comprehensive Socket.IO test...');
+            
+            await testBasicConnection();
+            
+            if (testSocketIOLibrary()) {
+                setTimeout(() => {
+                    testSocketConnection();
+                }, 1000);
+            }
+        }
+
+        // Start tests when page loads
+        window.addEventListener('load', () => {
+            log('📄 Page loaded, starting tests...');
+            runAllTests();
+        });
+    </script>
+</body>
+</html>

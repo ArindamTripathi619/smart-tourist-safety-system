@@ -5,11 +5,15 @@ class SocketHandler {
   constructor(server) {
     this.io = new Server(server, {
       cors: {
-        origin: ['http://localhost:3000', 'http://localhost:8081', '*'],
-        methods: ['GET', 'POST'],
-        credentials: true
+        origin: true, // Allow all origins
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        credentials: true,
+        allowedHeaders: ['*']
       },
-      transports: ['websocket', 'polling']
+      transports: ['polling', 'websocket'], // Try polling first
+      allowEIO3: true, // Allow Engine.IO v3 clients
+      pingTimeout: 60000,
+      pingInterval: 25000
     });
     
     this.connectedUsers = new Map(); // Store user connections

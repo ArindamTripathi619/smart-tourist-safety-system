@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tourist Safety - Real-time Monitoring</title>
-    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="/socket.io.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; }
@@ -29,7 +29,7 @@
     <div class="container">
         <div class="header">
             <h1>🚨 Tourist Safety Real-time Monitoring Dashboard</h1>
-            <p>SIH 2025 - Smart Tourist Safety System</p>
+            <p>SIH 2025 - Smart Tourist Safety System - Updated: Sept 19, 2025 18:51</p>
             <div id="connection-status" class="status disconnected">🔴 Disconnected from server</div>
         </div>
 
@@ -67,16 +67,24 @@
         </div>
 
         <div class="log" id="log">
-            <div>Connecting to Socket.IO server...</div>
+            <div>🚀 Dashboard loaded at Sept 19, 2025 18:51 - Connecting to Socket.IO server...</div>
         </div>
     </div>
 
     <script>
-        const socket = io('http://localhost:5000', {
+        // Force cache refresh with timestamp
+        const timestamp = Date.now();
+        console.log('🚀 Initializing monitoring dashboard at', new Date().toLocaleTimeString());
+        console.log('🔗 Connecting to server...');
+        
+        const socket = io({
             autoConnect: true,
             reconnection: true,
             timeout: 20000,
-            forceNew: true
+            forceNew: true,
+            query: { t: timestamp },
+            transports: ['polling'], // Start with polling only
+            upgrade: true // Allow upgrade after connection
         });
         const log = document.getElementById('log');
         const connectionStatus = document.getElementById('connection-status');

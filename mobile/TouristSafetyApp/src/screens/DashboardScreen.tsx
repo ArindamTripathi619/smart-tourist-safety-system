@@ -61,13 +61,19 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
   };
 
   const toggleLocationTracking = () => {
+    console.log('Start Tracking button pressed!');
+    console.log('Current tracking state:', isTrackingLocation);
+    
     if (isTrackingLocation) {
+      console.log('Stopping location tracking...');
       locationService.stopLocationTracking();
       setIsTrackingLocation(false);
       Alert.alert('Location Tracking', 'Location tracking stopped');
     } else {
+      console.log('Starting location tracking...');
       locationService.startLocationTracking(
         (newLocation) => {
+          console.log('New location received:', newLocation);
           setLocation(newLocation);
           
           // Send location update to server via Socket.IO for real-time monitoring
@@ -75,8 +81,8 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
           console.log('Location sent to server:', newLocation);
         },
         (error) => {
-          Alert.alert('Location Error', 'Failed to track location');
           console.error('Location tracking error:', error);
+          Alert.alert('Location Error', 'Failed to track location: ' + error.message);
         }
       );
       setIsTrackingLocation(true);
@@ -91,6 +97,7 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
   };
 
   const handleEmergency = () => {
+    console.log('Emergency/Panic button pressed!');
     Alert.alert(
       'Emergency Alert',
       'Are you sure you want to send an emergency alert?',
@@ -99,7 +106,10 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
         {
           text: 'Send Alert',
           style: 'destructive',
-          onPress: () => navigation.navigate('Emergency'),
+          onPress: () => {
+            console.log('Navigating to Emergency screen...');
+            navigation.navigate('Emergency');
+          },
         },
       ]
     );

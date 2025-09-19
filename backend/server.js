@@ -23,8 +23,28 @@ const socketHandler = new SocketHandler(server);
 // Connect to database
 connectDB();
 
-// Middleware
-app.use(helmet());
+// Middleware - Configure helmet to allow Socket.IO CDN
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "https://cdn.socket.io",
+        "https://unpkg.com"
+      ],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: [
+        "'self'", 
+        "ws://10.5.120.254:5000",
+        "wss://10.5.120.254:5000",
+        "http://10.5.120.254:5000"
+      ]
+    }
+  }
+}));
 app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json());

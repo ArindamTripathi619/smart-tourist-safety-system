@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Socket Test</title>
+    <script src="/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Simple Socket Connection Test</h1>
+    <div id="status">Loading...</div>
+    <div id="logs" style="background: #f0f0f0; padding: 10px; margin-top: 20px; font-family: monospace; white-space: pre-wrap;"></div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}\n`;
+            logsDiv.textContent += logMessage;
+            console.log(logMessage);
+        }
+
+        try {
+            log('🚀 Starting Socket.IO connection test...');
+            statusDiv.textContent = 'Initializing...';
+            
+            if (typeof io === 'undefined') {
+                throw new Error('Socket.IO library not loaded');
+            }
+            
+            log('✅ Socket.IO library loaded successfully');
+            
+            const socket = io({
+                autoConnect: true,
+                reconnection: true,
+                timeout: 20000,
+                transports: ['polling']
+            });
+            
+            log('🔌 Socket.IO instance created');
+            statusDiv.textContent = 'Connecting...';
+            
+            socket.on('connect', () => {
+                log('✅ Connected! Socket ID: ' + socket.id);
+                statusDiv.textContent = '🟢 Connected';
+                statusDiv.style.color = 'green';
+            });
+            
+            socket.on('disconnect', () => {
+                log('❌ Disconnected from server');
+                statusDiv.textContent = '🔴 Disconnected';
+                statusDiv.style.color = 'red';
+            });
+            
+            socket.on('connect_error', (error) => {
+                log('❌ Connection error: ' + error.message);
+                statusDiv.textContent = '🔴 Connection Error';
+                statusDiv.style.color = 'red';
+            });
+            
+        } catch (error) {
+            log('❌ JavaScript Error: ' + error.message);
+            statusDiv.textContent = '🔴 JavaScript Error';
+            statusDiv.style.color = 'red';
+        }
+    </script>
+</body>
+</html>

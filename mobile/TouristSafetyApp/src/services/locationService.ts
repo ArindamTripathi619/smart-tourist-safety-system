@@ -7,6 +7,7 @@ export class LocationService {
 
   // Request location permissions
   async requestLocationPermission(): Promise<boolean> {
+    console.log('Requesting location permission...');
     if (Platform.OS === 'android') {
       try {
         const granted = await PermissionsAndroid.request(
@@ -19,13 +20,17 @@ export class LocationService {
             buttonPositive: 'OK',
           }
         );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
+        console.log('Permission result:', granted);
+        const isGranted = granted === PermissionsAndroid.RESULTS.GRANTED;
+        console.log('Permission granted:', isGranted);
+        return isGranted;
       } catch (err) {
         console.warn('Location permission error:', err);
         return false;
       }
     } else {
       // iOS permission handling would go here
+      console.log('iOS platform detected, returning true');
       return true;
     }
   }
@@ -105,12 +110,16 @@ export class LocationService {
     onLocationUpdate: (location: LocationData) => void,
     onError: (error: any) => void
   ): void {
+    console.log('Starting location tracking...');
+    
     if (this.watchId !== null) {
+      console.log('Stopping existing watch first...');
       this.stopLocationTracking();
     }
 
     this.watchId = Geolocation.watchPosition(
       (position) => {
+        console.log('Location update received:', position.coords);
         const locationData: LocationData = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -132,6 +141,8 @@ export class LocationService {
         fastestInterval: 10000, // Fastest update every 10 seconds
       }
     );
+    
+    console.log('Watch ID set to:', this.watchId);
   }
 
   // Stop watching location changes

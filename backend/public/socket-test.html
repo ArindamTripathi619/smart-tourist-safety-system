@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Socket.IO Connection Test</title>
-    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="/socket.io.min.js"></script>
 </head>
 <body>
     <h1>Socket.IO Connection Test</h1>
@@ -20,7 +20,7 @@
 
         log('Starting Socket.IO client...');
 
-        const socket = io('http://localhost:5000', {
+        const socket = io('http://10.5.120.254:5000', {
             autoConnect: true,
             reconnection: true,
             timeout: 20000,

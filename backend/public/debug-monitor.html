@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Monitor - Tourist Safety</title>
+    <script src="/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+        .status { padding: 15px; margin: 10px 0; border-radius: 5px; font-weight: bold; }
+        .connected { background: #d5f4e6; color: #27ae60; }
+        .disconnected { background: #fadbd8; color: #e74c3c; }
+        .log { background: #2c3e50; color: white; padding: 15px; border-radius: 5px; height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        .stats { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Monitor - Sept 19, 2025 18:52</h1>
+    <div id="connection-status" class="status disconnected">🔴 Initializing connection...</div>
+    
+    <div class="stats">
+        <strong>Connection Stats:</strong>
+        <div>Connected Users: <span id="connected-users">0</span></div>
+        <div>Online Tourists: <span id="online-tourists">0</span></div>
+        <div>Locations Tracked: <span id="locations-tracked">0</span></div>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <script>
+        const log = document.getElementById('log');
+        const connectionStatus = document.getElementById('connection-status');
+        
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            console.log(logEntry);
+            log.innerHTML += `<div>${logEntry}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        addLog('🚀 Debug monitor started');
+        addLog('🔗 Attempting to connect to server...');
+
+        // Create socket connection with detailed logging - use relative URL
+        const socket = io({
+            autoConnect: true,
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5,
+            timeout: 10000,
+            forceNew: true,
+            transports: ['polling'], // Start with polling only
+            upgrade: true // Allow upgrade to websocket after connection
+        });
+
+        // Log all socket events for debugging
+        socket.onAny((eventName, ...args) => {
+            addLog(`📨 Socket event: ${eventName} - ${JSON.stringify(args).substring(0, 100)}`);
+        });
+
+        socket.on('connect', () => {
+            addLog(`✅ Socket connected! ID: ${socket.id}`);
+            connectionStatus.innerHTML = '🟢 Connected to server';
+            connectionStatus.className = 'status connected';
+            
+            addLog('🔐 Attempting admin authentication...');
+            socket.emit('authenticate', {
+                token: 'admin-demo-token',
+                userType: 'admin'
+            });
+        });
+
+        socket.on('connect_error', (error) => {
+            addLog(`❌ Connection error: ${error.message}`);
+            addLog(`❌ Error details: ${JSON.stringify(error)}`);
+            connectionStatus.innerHTML = '🔴 Connection failed';
+            connectionStatus.className = 'status disconnected';
+        });
+
+        socket.on('disconnect', (reason) => {
+            addLog(`📡 Disconnected: ${reason}`);
+            connectionStatus.innerHTML = '🔴 Disconnected';
+            connectionStatus.className = 'status disconnected';
+        });
+
+        socket.on('authenticated', (data) => {
+            addLog(`🔐 Authenticated successfully: ${JSON.stringify(data)}`);
+            
+            // Request initial data
+            socket.emit('get_user_locations');
+            socket.emit('get_online_users');
+        });
+
+        socket.on('auth_error', (error) => {
+            addLog(`🚫 Authentication failed: ${error.message}`);
+        });
+
+        socket.on('user_stats', (stats) => {
+            addLog(`📊 Stats update: ${JSON.stringify(stats)}`);
+            document.getElementById('connected-users').textContent = stats.totalConnected || 0;
+            document.getElementById('online-tourists').textContent = stats.onlineTourists || 0;
+        });
+
+        socket.on('location_update', (location) => {
+            addLog(`📍 Location update: User ${location.digitalId} at ${location.latitude}, ${location.longitude}`);
+            const currentCount = parseInt(document.getElementById('locations-tracked').textContent) + 1;
+            document.getElementById('locations-tracked').textContent = currentCount;
+        });
+
+        socket.on('emergency_alert', (alert) => {
+            addLog(`🚨 EMERGENCY: User ${alert.digitalId} - ${alert.message}`);
+        });
+
+        // Start connection attempt
+        addLog('⏳ Initializing Socket.IO client...');
+    </script>
+</body>
+</html>
