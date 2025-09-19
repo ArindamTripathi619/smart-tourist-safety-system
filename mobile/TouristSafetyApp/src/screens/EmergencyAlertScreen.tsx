@@ -9,22 +9,39 @@ import {
   ScrollView,
   Animated,
 } from 'react-native';
-import { emergencyAPI } from '../services/api';
+import { emergencyAPI, tokenManager } from '../services/api';
 import { locationService } from '../services/locationService';
 import socketService from '../services/socketService';
-import { EmergencyAlert, LocationData, NavigationProps } from '../types';
+import emergencyContactService, { EmergencyNotificationData } from '../services/emergencyContactService';
+import { EmergencyAlert, LocationData, NavigationProps, User } from '../types';
 
 const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
   const [selectedType, setSelectedType] = useState<EmergencyAlert['type']>('panic');
   const [message, setMessage] = useState('');
   const [location, setLocation] = useState<LocationData | null>(null);
   const [sending, setSending] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [pulseAnim] = useState(new Animated.Value(1));
 
   useEffect(() => {
     getCurrentLocation();
+    loadUserData();
     startPulseAnimation();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadUserData = async () => {
+    try {
+      const userData = await tokenManager.getUserData();
+      if (userData) {
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getCurrentLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
     try {
@@ -160,6 +177,53 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
         await emergencyAPI.sendAlert(alertData);
       } catch (apiError) {
         console.warn('REST API emergency alert failed, but socket alert sent:', apiError);
+      }
+
+      // Send notification to emergency contact
+      if (user && user.emergencyContact) {
+        try {
+          const notificationData: EmergencyNotificationData = {
+            touristName: user.name,
+            digitalId: user.digitalId,
+            location: { latitude: location.latitude, longitude: location.longitude },
+            message: `${selectedType.toUpperCase()}: ${alertData.message}`,
+            timestamp: new Date()
+          };
+
+          const contactData = {
+            phone: user.emergencyContact,
+            name: 'Emergency Contact'
+          };
+
+          // Show SMS option to user
+          Alert.alert(
+            'Alert Sent! 🚨',
+            'Your emergency alert has been sent to authorities. Would you like to notify your emergency contact?',
+            [
+              {
+                text: 'Skip',
+                style: 'cancel',
+                onPress: () => navigation.goBack(),
+              },
+              {
+                text: 'Send SMS to Emergency Contact',
+                onPress: async () => {
+                  const smsSent = await emergencyContactService.sendSMS(contactData, notificationData);
+                  if (smsSent) {
+                    Alert.alert('Success', 'Emergency contact has been notified via SMS');
+                  } else {
+                    Alert.alert('Note', 'Please manually contact your emergency contact');
+                  }
+                  navigation.goBack();
+                },
+              },
+            ]
+          );
+          return; // Don't show the original success dialog
+        } catch (contactError) {
+          console.error('Error notifying emergency contact:', contactError);
+          // Continue with original success dialog if contact notification fails
+        }
       }
 
       if (socketSent || true) { // Consider successful if either method works

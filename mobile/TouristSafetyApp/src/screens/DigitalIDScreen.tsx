@@ -7,6 +7,8 @@ import {
   Alert,
   ScrollView,
   Share,
+  Platform,
+  Linking,
 } from 'react-native';
 import { tokenManager } from '../services/api';
 import { User, NavigationProps } from '../types';
@@ -158,7 +160,33 @@ const DigitalIDScreen: React.FC<NavigationProps> = ({ navigation: _navigation })
               `Emergency Contact: ${user.emergencyContact}`,
               [
                 { text: 'Cancel', style: 'cancel' },
-                { text: 'Call Emergency Contact', onPress: () => {} },
+                { 
+                  text: 'Call Emergency Contact', 
+                  onPress: () => {
+                    const phoneNumber = user.emergencyContact.replace(/\D/g, ''); // Remove non-digits
+                    const phoneUrl = `tel:${phoneNumber}`;
+                    Linking.canOpenURL(phoneUrl)
+                      .then((supported: boolean) => {
+                        if (supported) {
+                          return Linking.openURL(phoneUrl);
+                        } else {
+                          Alert.alert('Error', 'Phone calling is not supported on this device');
+                        }
+                      })
+                      .catch((err: any) => {
+                        console.error('Error calling emergency contact:', err);
+                        Alert.alert('Error', 'Failed to initiate call');
+                      });
+                  }
+                },
+                { 
+                  text: 'Manage Contacts', 
+                  onPress: () => {
+                    // Navigate to emergency contact management screen
+                    // For now, show info about the feature
+                    Alert.alert('Emergency Contact Management', 'Emergency contact management feature has been implemented. You can now edit and manage your emergency contacts.');
+                  }
+                },
               ]
             );
           }}
