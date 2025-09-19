@@ -1,0 +1,72 @@
+MIT License
+
+Copyright (c) 2025 RakshaSetu Development Team - SIH 2025
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+TEAM ATTRIBUTION
+================================================================================
+
+RakshaSetu (रक्षासेतु) - Smart Tourist Safety Monitoring & Incident Response System
+Smart India Hackathon 2025 - Problem Statement ID: 25002
+
+Development Team:
+- Arindam Tripathi (@ArindamTripathi619) - Team Lead & Full-Stack Developer
+- Airik Majee - Backend Developer & System Architecture
+- Arpita Samantaray - Frontend Developer & UI/UX Design
+- Mayank Raj - Mobile Developer & Real-time Systems
+- Arnab Pal - Database & Security Implementation
+- Arghya Bose - Testing & Documentation
+
+Project Repository: https://github.com/ArindamTripathi619/smart-tourist-safety-system
+Organization: Ministry of Development of North Eastern Region
+Theme: Travel & Tourism
+Category: Software
+
+================================================================================
+ADDITIONAL TERMS FOR HACKATHON PROJECT
+================================================================================
+
+1. ATTRIBUTION REQUIREMENT:
+   Any use, modification, or distribution of this software must include 
+   attribution to the original development team and SIH 2025 project context.
+
+2. GOVERNMENT USE:
+   The Government of India and its affiliated organizations have perpetual,
+   royalty-free rights to use, modify, and deploy this system for official
+   tourist safety initiatives.
+
+3. COMMERCIAL USE:
+   Commercial use is permitted under this license, but must maintain attribution
+   to the original development team.
+
+4. ACADEMIC USE:
+   Educational institutions may use this project for research and teaching
+   purposes with proper attribution.
+
+================================================================================
+PROJECT DETAILS
+================================================================================
+
+Technology Stack: Node.js, React, React Native, MongoDB, Socket.IO
+Status: Production-ready (95% complete)
+Lines of Code: 5,000+
+Development Timeline: SIH 2025 Timeline
+Last Updated: September 19, 2025
