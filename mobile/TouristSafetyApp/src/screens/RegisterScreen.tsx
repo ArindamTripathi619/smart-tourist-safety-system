@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { authAPI, tokenManager } from '../services/api';
+import { refreshAuthStatus } from '../hooks/useAuth';
 import { RegisterFormData, NavigationProps } from '../types';
 
 const RegisterScreen: React.FC<NavigationProps> = ({ navigation }) => {
@@ -84,9 +85,9 @@ const RegisterScreen: React.FC<NavigationProps> = ({ navigation }) => {
           {
             text: 'OK',
             onPress: () => {
-              // Since we stored the token, the App component will automatically
-              // detect the authentication state change and navigate to MainTabs
-              // No need to manually navigate - the useEffect in App.tsx will handle it
+              // Immediately refresh auth status to trigger navigation
+              refreshAuthStatus();
+              setLoading(false);
             },
           },
         ]
@@ -94,7 +95,6 @@ const RegisterScreen: React.FC<NavigationProps> = ({ navigation }) => {
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
       Alert.alert('Registration Failed', errorMessage);
-    } finally {
       setLoading(false);
     }
   };

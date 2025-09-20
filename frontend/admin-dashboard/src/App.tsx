@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
 import Dashboard from './components/Dashboard';
 
 // Create a professional theme
@@ -30,6 +31,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
           <Route 
             path="/dashboard" 
             element={

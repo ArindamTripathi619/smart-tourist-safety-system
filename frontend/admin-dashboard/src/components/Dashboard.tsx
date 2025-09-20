@@ -20,6 +20,13 @@ import {
   Menu,
   MenuItem,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   AccountCircle,
@@ -44,16 +51,27 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [resolveDialog, setResolveDialog] = useState<{
+    open: boolean;
+    alertId: string;
+    alertType: string;
+  }>({
+    open: false,
+    alertId: '',
+    alertType: '',
+  });
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get current user from localStorage
-    const userData = localStorage.getItem('adminUser');
-    if (userData) {
-      setCurrentUser(JSON.parse(userData));
-    }
-
     fetchUsers();
     fetchAlertStats();
     fetchRecentAlerts();
@@ -165,6 +183,53 @@ const Dashboard: React.FC = () => {
       case 'LOW': return '#27ae60';
       default: return '#95a5a6';
     }
+  };
+
+  const handleResolveAlert = (alertId: string, alertType: string = 'Emergency') => {
+    setResolveDialog({
+      open: true,
+      alertId,
+      alertType,
+    });
+  };
+
+  const confirmResolveAlert = async () => {
+    const { alertId, alertType } = resolveDialog;
+    
+    try {
+      const response = await apiService.resolveAlert(alertId);
+      
+      if (response.success) {
+        setNotification({
+          open: true,
+          message: `${alertType} alert resolved successfully!`,
+          severity: 'success',
+        });
+        
+        // Refresh data to show updated status
+        await fetchAlertStats();
+        await fetchRecentAlerts();
+      } else {
+        setNotification({
+          open: true,
+          message: `Failed to resolve alert: ${response.message}`,
+          severity: 'error',
+        });
+      }
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: 'Error resolving alert. Please try again.',
+        severity: 'error',
+      });
+      console.error('Error resolving alert:', error);
+    } finally {
+      setResolveDialog({ open: false, alertId: '', alertType: '' });
+    }
+  };
+
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
   };
 
   return (
@@ -313,6 +378,15 @@ const Dashboard: React.FC = () => {
                     >
                       View on Map
                     </Button>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="success"
+                      sx={{ ml: 1, mt: 1 }}
+                      onClick={() => handleResolveAlert(alert.alertId, emergencyInfo.label)}
+                    >
+                      ✅ Resolve Alert
+                    </Button>
                   </Box>
                 );
               })}
@@ -395,9 +469,23 @@ const Dashboard: React.FC = () => {
                               onClick={() => {
                                 window.open(`https://www.google.com/maps?q=${alert.location.latitude},${alert.location.longitude}`, '_blank');
                               }}
+                              sx={{ mr: 1 }}
                             >
                               Map
                             </Button>
+                            {alert.status === 'ACTIVE' && (
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color="success"
+                                onClick={() => {
+                                  const emergencyInfo = getEmergencyTypeInfo(alert.emergencyType);
+                                  handleResolveAlert(alert.alertId, emergencyInfo.label);
+                                }}
+                              >
+                                Resolve
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -503,6 +591,61 @@ const Dashboard: React.FC = () => {
           </Card>
         )}
       </Box>
+
+      {/* Resolve Alert Confirmation Dialog */}
+      <Dialog
+        open={resolveDialog.open}
+        onClose={() => setResolveDialog({ open: false, alertId: '', alertType: '' })}
+        aria-labelledby="resolve-alert-dialog-title"
+        aria-describedby="resolve-alert-dialog-description"
+      >
+        <DialogTitle id="resolve-alert-dialog-title">
+          🔒 Resolve Emergency Alert
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="resolve-alert-dialog-description">
+            Are you sure you want to mark this <strong>{resolveDialog.alertType}</strong> alert as resolved?
+            This action will:
+            <br />• Change the alert status to RESOLVED
+            <br />• Remove it from the active alerts list
+            <br />• Record the resolution timestamp
+            <br />• Notify the system that this emergency has been handled
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setResolveDialog({ open: false, alertId: '', alertType: '' })}
+            color="inherit"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={confirmResolveAlert} 
+            color="success"
+            variant="contained"
+            autoFocus
+          >
+            ✅ Confirm Resolve
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={4000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

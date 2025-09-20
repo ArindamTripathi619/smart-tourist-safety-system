@@ -5,8 +5,8 @@
  * @format
  */
 
-import React, { useState, useEffect } from 'react';
-import { StatusBar, StyleSheet, View, Text, AppState } from 'react-native';
+import React from 'react';
+import { StatusBar, StyleSheet, View, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -20,9 +20,8 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import DigitalIDScreen from './src/screens/DigitalIDScreen';
 import EmergencyAlertScreen from './src/screens/EmergencyAlertScreen';
 
-// Import services
-import { tokenManager } from './src/services/api';
-import socketService from './src/services/socketService';
+// Import hooks
+import useAuth from './src/hooks/useAuth';
 import { RootStackParamList, TabStackParamList } from './src/types';
 
 // Create navigators
@@ -108,77 +107,7 @@ const TabNavigator: React.FC = () => {
 
 // Main App Component
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-    
-    const initializeAuth = async () => {
-      if (mounted) {
-        await checkAuthStatus();
-      }
-    };
-    
-    initializeAuth();
-    
-    // Listen for app state changes
-    const handleAppStateChange = (nextAppState: string) => {
-      if (nextAppState === 'active' && mounted) {
-        checkAuthStatus();
-      }
-    };
-
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
-    return () => {
-      mounted = false;
-      subscription?.remove();
-    };
-  }, []);
-
-  // Add a new effect to listen for auth state changes
-  useEffect(() => {
-    // Force a re-check when authentication state changes
-    const interval = setInterval(() => {
-      if (isAuthenticated === null) {
-        checkAuthStatus();
-      }
-    }, 1000); // Check more frequently only when null
-    
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
-
-  const checkAuthStatus = async () => {
-    try {
-      const token = await tokenManager.getToken();
-      const userData = await tokenManager.getUserData();
-      
-      console.log('Auth check - Token exists:', !!token);
-      console.log('Auth check - User data exists:', !!userData);
-      
-      if (token && userData) {
-        console.log('User authenticated, initializing socket...');
-        setIsAuthenticated(true);
-        
-        // Initialize Socket.IO connection with authentication token
-        await socketService.updateToken(token);
-        console.log('Socket.IO initialized with user token');
-      } else {
-        console.log('User not authenticated');
-        setIsAuthenticated(false);
-        
-        // Disconnect socket if not authenticated
-        socketService.disconnect();
-      }
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-      setIsAuthenticated(false);
-      socketService.disconnect();
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return (

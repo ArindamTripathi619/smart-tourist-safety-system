@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { authAPI, tokenManager } from '../services/api';
+import { refreshAuthStatus } from '../hooks/useAuth';
 import { LoginFormData, NavigationProps } from '../types';
 
 const LoginScreen: React.FC<NavigationProps> = ({ navigation }) => {
@@ -58,14 +59,24 @@ const LoginScreen: React.FC<NavigationProps> = ({ navigation }) => {
       await tokenManager.setToken(response.token);
       await tokenManager.setUserData(response.user);
 
-      Alert.alert('Success', 'Login successful! Welcome back!');
+      Alert.alert(
+        'Success', 
+        'Login successful! Welcome back!',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Immediately refresh auth status to trigger navigation
+              refreshAuthStatus();
+              setLoading(false);
+            }
+          }
+        ]
+      );
       
-      // The App component will automatically detect the stored token and navigate
-      setLoading(false);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
       Alert.alert('Login Failed', errorMessage);
-    } finally {
       setLoading(false);
     }
   };

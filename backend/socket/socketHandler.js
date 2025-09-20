@@ -306,8 +306,27 @@ class SocketHandler {
       alert.status = 'RESOLVED';
       alert.resolvedAt = new Date();
       this.emergencyAlerts.set(alertId, alert);
+      
+      // Broadcast resolution to all admins
+      this.broadcastToAdmins('alert_resolved', {
+        alertId: alertId,
+        resolvedAt: alert.resolvedAt,
+        alert: alert
+      });
+      
+      // Notify the user who sent the alert that it's been resolved
+      if (alert.userId) {
+        this.sendToUser(alert.userId, 'alert_resolved', {
+          alertId: alertId,
+          message: 'Your emergency alert has been resolved by authorities',
+          resolvedAt: alert.resolvedAt
+        });
+      }
+      
+      console.log(`🔒 Alert ${alertId} resolved successfully`);
       return true;
     }
+    console.log(`❌ Alert ${alertId} not found for resolution`);
     return false;
   }
 

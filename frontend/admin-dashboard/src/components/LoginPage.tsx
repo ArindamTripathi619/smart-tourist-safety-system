@@ -9,6 +9,7 @@ import {
   Alert,
   Container,
   Paper,
+  Link,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
@@ -108,10 +109,24 @@ const LoginPage: React.FC = () => {
               </Button>
             </Box>
 
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body2">
+                Don't have an admin account?{' '}
+                <Link 
+                  component="button" 
+                  variant="body2" 
+                  onClick={() => navigate('/register')}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  Register Here
+                </Link>
+              </Typography>
+            </Box>
+
             <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
               <Typography variant="body2" color="text.secondary" align="center">
-                <strong>Demo Credentials:</strong><br/>
-                For testing, register any user via API<br/>
+                <strong>For Presentation Demo:</strong><br/>
+                Register a new admin account above<br/>
                 or use existing test accounts
               </Typography>
             </Box>

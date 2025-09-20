@@ -162,10 +162,27 @@ mobile/TouristSafetyApp/ios/DerivedData/
 # Temporary documentation files (keep only essential docs)
 *SUCCESS*.md
 *GUIDE*.md
+*FIX*.md
+*COMPLETE*.md
 !docs/
 !README.md
+!GETTING_STARTED.md
 
-# Test files
+# Test files and scripts
 test_*.js
 *test*.js
 debug_*.js
+fix-*.sh
+*.test.js
+*.spec.js
+
+# Demo and temporary files  
+demo-*.sh
+temp-*.js
+*-temp.*
+*.bak
+*.tmp
+
+
+# Presentation
+presentation/
