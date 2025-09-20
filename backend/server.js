@@ -9,6 +9,7 @@ require('dotenv').config();
 // Import database connection and routes
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
+const verificationRoutes = require('./routes/verification');
 const SocketHandler = require('./socket/socketHandler');
 
 const app = express();
@@ -64,6 +65,7 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api', verificationRoutes);
 
 // Socket.IO stats endpoint
 app.get('/api/socket/stats', (req, res) => {

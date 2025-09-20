@@ -79,11 +79,15 @@ const RegisterScreen: React.FC<NavigationProps> = ({ navigation }) => {
 
       Alert.alert(
         'Registration Successful!',
-        `Welcome ${response.user.name}! Your Digital ID is: ${response.user.digitalId}. Please login with your credentials.`,
+        `Welcome ${response.user.name}! Your Digital ID is: ${response.user.digitalId}. You are now logged in and ready to explore!`,
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Login'),
+            onPress: () => {
+              // Since we stored the token, the App component will automatically
+              // detect the authentication state change and navigate to MainTabs
+              // No need to manually navigate - the useEffect in App.tsx will handle it
+            },
           },
         ]
       );
@@ -201,7 +205,7 @@ const RegisterScreen: React.FC<NavigationProps> = ({ navigation }) => {
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>Already have an account?</Text>
               <TouchableOpacity
-                onPress={() => navigation.navigate('Login')}
+                onPress={() => navigation.goBack()}
                 disabled={loading}
               >
                 <Text style={styles.loginLink}>Sign In</Text>

@@ -54,9 +54,14 @@ const TabNavigator: React.FC = () => {
         tabBarStyle: {
           backgroundColor: '#fff',
           borderTopColor: '#ecf0f1',
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          paddingBottom: 8, // Increased padding for better touch targets
+          paddingTop: 8, // Increased top padding
+          height: 70, // Increased height for better accessibility
+          elevation: 8, // Higher elevation to show above content
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -107,27 +112,42 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuthStatus();
+    let mounted = true;
+    
+    const initializeAuth = async () => {
+      if (mounted) {
+        await checkAuthStatus();
+      }
+    };
+    
+    initializeAuth();
     
     // Listen for app state changes
     const handleAppStateChange = (nextAppState: string) => {
-      if (nextAppState === 'active') {
+      if (nextAppState === 'active' && mounted) {
         checkAuthStatus();
       }
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     
-    // Set up periodic check for auth state
-    const interval = setInterval(() => {
-      checkAuthStatus();
-    }, 10000); // Check every 10 seconds instead of 2
-    
     return () => {
+      mounted = false;
       subscription?.remove();
-      clearInterval(interval);
     };
   }, []);
+
+  // Add a new effect to listen for auth state changes
+  useEffect(() => {
+    // Force a re-check when authentication state changes
+    const interval = setInterval(() => {
+      if (isAuthenticated === null) {
+        checkAuthStatus();
+      }
+    }, 1000); // Check more frequently only when null
+    
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const checkAuthStatus = async () => {
     try {
@@ -222,7 +242,7 @@ const styles = StyleSheet.create({
     color: '#ecf0f1',
   },
   tabIcon: {
-    fontSize: 20,
+    fontSize: 24, // Increased from 20 for better visibility
   },
 });
 

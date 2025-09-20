@@ -9,13 +9,16 @@ import {
   Share,
   Platform,
   Linking,
+  Modal,
 } from 'react-native';
 import { tokenManager } from '../services/api';
 import { User, NavigationProps } from '../types';
+import QRVerificationScreen from '../components/QRVerificationScreen';
 
 const DigitalIDScreen: React.FC<NavigationProps> = ({ navigation: _navigation }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -195,15 +198,19 @@ const DigitalIDScreen: React.FC<NavigationProps> = ({ navigation: _navigation })
         </TouchableOpacity>
       </View>
 
-      {/* QR Code Placeholder */}
+      {/* QR Code Section */}
       <View style={styles.qrSection}>
-        <Text style={styles.qrTitle}>QR Code</Text>
-        <View style={styles.qrPlaceholder}>
-          <Text style={styles.qrText}>QR Code for {user.digitalId}</Text>
-          <Text style={styles.qrSubtext}>
-            Scan this code for instant ID verification
-          </Text>
-        </View>
+        <Text style={styles.qrTitle}>🆔 Digital ID QR Code</Text>
+        <Text style={styles.qrDescription}>
+          Generate a QR code for instant verification by authorities
+        </Text>
+        
+        <TouchableOpacity 
+          style={styles.generateQRButton} 
+          onPress={() => setShowQR(true)}
+        >
+          <Text style={styles.generateQRButtonText}>📱 Generate QR Code</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Footer */}
@@ -215,6 +222,21 @@ const DigitalIDScreen: React.FC<NavigationProps> = ({ navigation: _navigation })
           Keep this ID accessible during your travels
         </Text>
       </View>
+
+      {/* QR Code Modal */}
+      <Modal
+        visible={showQR}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+      >
+        {user && (
+          <QRVerificationScreen 
+            digitalId={user.digitalId} 
+            onClose={() => setShowQR(false)} 
+          />
+        )}
+      </Modal>
     </ScrollView>
   );
 };
@@ -390,30 +412,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2c3e50',
-    marginBottom: 16,
-  },
-  qrPlaceholder: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#ecf0f1',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#bdc3c7',
-    borderStyle: 'dashed',
-  },
-  qrText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#7f8c8d',
-    textAlign: 'center',
     marginBottom: 8,
   },
-  qrSubtext: {
-    fontSize: 12,
-    color: '#95a5a6',
+  qrDescription: {
+    fontSize: 14,
+    color: '#7f8c8d',
     textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
   },
   footer: {
     margin: 16,
@@ -430,6 +436,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#95a5a6',
     textAlign: 'center',
+  },
+  generateQRButton: {
+    backgroundColor: '#3498db',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    shadowColor: '#3498db',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  generateQRButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
