@@ -63,9 +63,10 @@ export interface LocationData {
 }
 
 export interface EmergencyAlert {
-  type: 'panic' | 'medical' | 'theft' | 'other';
+  type: 'panic' | 'medical' | 'accident' | 'theft' | 'harassment' | 'lost' | 'natural_disaster' | 'fire' | 'violence' | 'suspicious_activity' | 'transport' | 'other';
   message?: string;
   location: LocationData;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
 // Authentication API calls

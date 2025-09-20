@@ -61,6 +61,32 @@ export interface ApiResponse<T> {
   users?: User[];
   count?: number;
   demo?: boolean;
+  stats?: AlertStats;
+  alerts?: EmergencyAlert[];
+}
+
+export interface AlertStats {
+  totalAlerts: number;
+  activeAlerts: number;
+  resolvedAlerts: number;
+  lastAlert: EmergencyAlert | null;
+}
+
+export interface EmergencyAlert {
+  alertId: string;
+  userId: string;
+  digitalId: string;
+  type: string;
+  emergencyType?: string;
+  priority?: string;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+  timestamp: string;
+  status: string;
+  message: string;
+  resolvedAt?: string;
 }
 
 // API functions
@@ -98,6 +124,28 @@ export const apiService = {
   // Health check
   healthCheck: async (): Promise<any> => {
     const response = await apiClient.get('/health');
+    return response.data;
+  },
+
+  // Alert management
+  getAlertStats: async (): Promise<ApiResponse<AlertStats>> => {
+    const response = await apiClient.get('/alerts/stats');
+    return response.data;
+  },
+
+  getEmergencyAlerts: async (): Promise<ApiResponse<EmergencyAlert[]>> => {
+    const response = await apiClient.get('/alerts/emergency');
+    return response.data;
+  },
+
+  resolveAlert: async (alertId: string): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post(`/alerts/${alertId}/resolve`);
+    return response.data;
+  },
+
+  // Socket stats
+  getSocketStats: async (): Promise<any> => {
+    const response = await apiClient.get('/socket/stats');
     return response.data;
   },
 };

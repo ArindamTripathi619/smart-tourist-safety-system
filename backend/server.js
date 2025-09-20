@@ -72,6 +72,47 @@ app.get('/api/socket/stats', (req, res) => {
   res.json(socketHandler.getStats());
 });
 
+// Alert statistics endpoint
+app.get('/api/alerts/stats', (req, res) => {
+  const stats = socketHandler.getAlertStats();
+  res.json({
+    success: true,
+    stats: {
+      totalAlerts: stats.totalAlerts || 0,
+      activeAlerts: stats.activeAlerts || 0,
+      resolvedAlerts: stats.resolvedAlerts || 0,
+      lastAlert: stats.lastAlert || null
+    }
+  });
+});
+
+// Get all emergency alerts (for admin)
+app.get('/api/alerts/emergency', (req, res) => {
+  const alerts = socketHandler.getEmergencyAlerts();
+  res.json({
+    success: true,
+    alerts: alerts || []
+  });
+});
+
+// Resolve an alert (for admin)
+app.post('/api/alerts/:alertId/resolve', (req, res) => {
+  const { alertId } = req.params;
+  const resolved = socketHandler.resolveAlert(alertId);
+  
+  if (resolved) {
+    res.json({
+      success: true,
+      message: 'Alert resolved successfully'
+    });
+  } else {
+    res.status(404).json({
+      success: false,
+      message: 'Alert not found'
+    });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',

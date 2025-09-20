@@ -109,11 +109,29 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
   };
 
   const emergencyTypes = [
-    { type: 'panic' as const, label: 'General Emergency', icon: '🚨', color: '#e74c3c' },
-    { type: 'medical' as const, label: 'Medical Emergency', icon: '🏥', color: '#e67e22' },
-    { type: 'theft' as const, label: 'Theft/Crime', icon: '⚠️', color: '#f39c12' },
-    { type: 'other' as const, label: 'Other Emergency', icon: '📞', color: '#9b59b6' },
+    { type: 'panic' as const, label: 'General Emergency', icon: '🚨', color: '#e74c3c', priority: 'HIGH' },
+    { type: 'medical' as const, label: 'Medical Emergency', icon: '🏥', color: '#e67e22', priority: 'CRITICAL' },
+    { type: 'accident' as const, label: 'Accident', icon: '🚗', color: '#d35400', priority: 'HIGH' },
+    { type: 'theft' as const, label: 'Theft/Robbery', icon: '🔓', color: '#f39c12', priority: 'MEDIUM' },
+    { type: 'harassment' as const, label: 'Harassment', icon: '⚠️', color: '#e74c3c', priority: 'HIGH' },
+    { type: 'lost' as const, label: 'Lost/Stranded', icon: '🧭', color: '#9b59b6', priority: 'MEDIUM' },
+    { type: 'natural_disaster' as const, label: 'Natural Disaster', icon: '🌪️', color: '#c0392b', priority: 'CRITICAL' },
+    { type: 'fire' as const, label: 'Fire Emergency', icon: '🔥', color: '#e74c3c', priority: 'CRITICAL' },
+    { type: 'violence' as const, label: 'Violence/Assault', icon: '🛡️', color: '#8e44ad', priority: 'CRITICAL' },
+    { type: 'suspicious_activity' as const, label: 'Suspicious Activity', icon: '👁️', color: '#f39c12', priority: 'LOW' },
+    { type: 'transport' as const, label: 'Transport Issue', icon: '🚌', color: '#3498db', priority: 'LOW' },
+    { type: 'other' as const, label: 'Other Emergency', icon: '📞', color: '#7f8c8d', priority: 'MEDIUM' },
   ];
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'CRITICAL': return '#c0392b';
+      case 'HIGH': return '#e74c3c';
+      case 'MEDIUM': return '#f39c12';
+      case 'LOW': return '#27ae60';
+      default: return '#95a5a6';
+    }
+  };
 
   const sendEmergencyAlert = async () => {
     if (!location) {
@@ -158,6 +176,7 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
         type: selectedType,
         message: message.trim() || `${emergencyTypes.find(t => t.type === selectedType)?.label} - No additional details provided`,
         location,
+        priority: emergencyTypes.find(t => t.type === selectedType)?.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
       };
 
       console.log('📨 Sending emergency alert via Socket.IO...');
@@ -316,7 +335,12 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
       {/* Emergency Type Selection */}
       <View style={styles.typeSection}>
         <Text style={styles.sectionTitle}>Select Emergency Type</Text>
-        <View style={styles.typeGrid}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.typeScrollView}
+          contentContainerStyle={styles.typeScrollContent}
+        >
           {emergencyTypes.map((type) => (
             <TouchableOpacity
               key={type.type}
@@ -337,9 +361,15 @@ const EmergencyAlertScreen: React.FC<NavigationProps> = ({ navigation }) => {
               >
                 {type.label}
               </Text>
+              <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(type.priority) }]}>
+                <Text style={styles.priorityText}>{type.priority}</Text>
+              </View>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
+        <Text style={styles.typeHint}>
+          🔥 CRITICAL and 🚨 HIGH priority alerts get immediate response
+        </Text>
       </View>
 
       {/* Message Input */}
@@ -504,14 +534,35 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+  typeScrollView: {
+    marginHorizontal: -5,
+  },
+  typeScrollContent: {
+    paddingHorizontal: 5,
+  },
   typeButton: {
-    width: '48%',
+    width: 140,
     borderWidth: 2,
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     alignItems: 'center',
+    marginHorizontal: 5,
     marginBottom: 12,
     backgroundColor: '#fff',
+    position: 'relative',
+  },
+  priorityBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  priorityText: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   typeIcon: {
     fontSize: 32,
@@ -525,6 +576,13 @@ const styles = StyleSheet.create({
   },
   typeLabelSelected: {
     color: '#fff',
+  },
+  typeHint: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   messageSection: {
     backgroundColor: '#fff',

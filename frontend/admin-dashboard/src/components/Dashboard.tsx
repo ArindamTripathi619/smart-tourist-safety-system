@@ -30,10 +30,17 @@ import {
   ExitToApp,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { apiService, User } from '../services/api';
+import { apiService, User, AlertStats, EmergencyAlert } from '../services/api';
 
 const Dashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [alertStats, setAlertStats] = useState<AlertStats>({
+    totalAlerts: 0,
+    activeAlerts: 0,
+    resolvedAlerts: 0,
+    lastAlert: null
+  });
+  const [recentAlerts, setRecentAlerts] = useState<EmergencyAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -48,6 +55,16 @@ const Dashboard: React.FC = () => {
     }
 
     fetchUsers();
+    fetchAlertStats();
+    fetchRecentAlerts();
+    
+    // Set up auto-refresh for real-time updates
+    const interval = setInterval(() => {
+      fetchAlertStats();
+      fetchRecentAlerts();
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchUsers = async () => {
@@ -67,10 +84,41 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const fetchAlertStats = async () => {
+    try {
+      const response = await apiService.getAlertStats();
+      
+      if (response.success && response.stats) {
+        setAlertStats(response.stats);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch alert stats:', err);
+      // Don't show error for alert stats as it's not critical
+    }
+  };
+
+  const fetchRecentAlerts = async () => {
+    try {
+      const response = await apiService.getEmergencyAlerts();
+      
+      if (response.success && response.alerts) {
+        setRecentAlerts(response.alerts.slice(0, 5)); // Show only last 5 alerts
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch recent alerts:', err);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     navigate('/login');
+  };
+
+  const refreshData = () => {
+    fetchUsers();
+    fetchAlertStats();
+    fetchRecentAlerts();
   };
 
   const handleMenuClose = () => {
@@ -91,6 +139,34 @@ const Dashboard: React.FC = () => {
            new Date(dateString).toLocaleTimeString();
   };
 
+  const getEmergencyTypeInfo = (emergencyType?: string) => {
+    const types: { [key: string]: { label: string; icon: string; color: string } } = {
+      'panic': { label: 'General Emergency', icon: '🚨', color: '#e74c3c' },
+      'medical': { label: 'Medical Emergency', icon: '🏥', color: '#e67e22' },
+      'accident': { label: 'Accident', icon: '🚗', color: '#d35400' },
+      'theft': { label: 'Theft/Robbery', icon: '🔓', color: '#f39c12' },
+      'harassment': { label: 'Harassment', icon: '⚠️', color: '#e74c3c' },
+      'lost': { label: 'Lost/Stranded', icon: '🧭', color: '#9b59b6' },
+      'natural_disaster': { label: 'Natural Disaster', icon: '🌪️', color: '#c0392b' },
+      'fire': { label: 'Fire Emergency', icon: '🔥', color: '#e74c3c' },
+      'violence': { label: 'Violence/Assault', icon: '🛡️', color: '#8e44ad' },
+      'suspicious_activity': { label: 'Suspicious Activity', icon: '👁️', color: '#f39c12' },
+      'transport': { label: 'Transport Issue', icon: '🚌', color: '#3498db' },
+      'other': { label: 'Other Emergency', icon: '📞', color: '#7f8c8d' },
+    };
+    return types[emergencyType || 'other'] || types['other'];
+  };
+
+  const getPriorityColor = (priority?: string) => {
+    switch (priority) {
+      case 'CRITICAL': return '#c0392b';
+      case 'HIGH': return '#e74c3c';
+      case 'MEDIUM': return '#f39c12';
+      case 'LOW': return '#27ae60';
+      default: return '#95a5a6';
+    }
+  };
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       {/* App Bar */}
@@ -99,7 +175,7 @@ const Dashboard: React.FC = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             🛡️ Smart Tourist Safety - Admin Dashboard
           </Typography>
-          <Button color="inherit" onClick={fetchUsers} startIcon={<Refresh />}>
+          <Button color="inherit" onClick={refreshData} startIcon={<Refresh />}>
             Refresh
           </Button>
           <div>
@@ -164,7 +240,7 @@ const Dashboard: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Analytics sx={{ fontSize: 40, mr: 2 }} />
                 <Box>
-                  <Typography variant="h4">0</Typography>
+                  <Typography variant="h4">{alertStats.activeAlerts}</Typography>
                   <Typography variant="body2">Active Alerts</Typography>
                 </Box>
               </Box>
@@ -174,15 +250,164 @@ const Dashboard: React.FC = () => {
           <Card sx={{ bgcolor: 'info.main', color: 'info.contrastText', flex: 1 }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <People sx={{ fontSize: 40, mr: 2 }} />
+                <Security sx={{ fontSize: 40, mr: 2 }} />
                 <Box>
-                  <Typography variant="h4">100%</Typography>
-                  <Typography variant="body2">System Health</Typography>
+                  <Typography variant="h4">{alertStats.totalAlerts}</Typography>
+                  <Typography variant="body2">Total Alerts</Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Stack>
+
+        {/* Emergency Alerts Section */}
+        {alertStats.activeAlerts > 0 && (
+          <Card sx={{ mb: 3, bgcolor: '#ffebee' }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom color="error">
+                🚨 Active Emergency Alerts ({alertStats.activeAlerts})
+              </Typography>
+              {recentAlerts.filter(alert => alert.status === 'ACTIVE').map((alert) => {
+                const emergencyInfo = getEmergencyTypeInfo(alert.emergencyType);
+                return (
+                  <Box key={alert.alertId} sx={{ 
+                    bgcolor: '#ffcdd2', 
+                    p: 2, 
+                    mb: 1, 
+                    borderRadius: 1,
+                    border: '1px solid #f44336'
+                  }}>
+                    <Typography variant="subtitle2" color="error" fontWeight="bold">
+                      {emergencyInfo.icon} {emergencyInfo.label} - Tourist ID: {alert.digitalId}
+                    </Typography>
+                    {alert.priority && (
+                      <Chip
+                        label={alert.priority}
+                        size="small"
+                        sx={{ 
+                          bgcolor: getPriorityColor(alert.priority),
+                          color: 'white',
+                          fontSize: '10px',
+                          height: '20px',
+                          mt: 0.5
+                        }}
+                      />
+                    )}
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      <strong>Message:</strong> {alert.message}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      <strong>Location:</strong> {alert.location.latitude.toFixed(6)}, {alert.location.longitude.toFixed(6)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {formatDate(alert.timestamp)}
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="primary"
+                      sx={{ ml: 2, mt: 1 }}
+                      onClick={() => {
+                        window.open(`https://www.google.com/maps?q=${alert.location.latitude},${alert.location.longitude}`, '_blank');
+                      }}
+                    >
+                      View on Map
+                    </Button>
+                  </Box>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Recent Alerts Summary */}
+        {recentAlerts.length > 0 && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                📊 Recent Emergency Alerts (Last 5)
+              </Typography>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tourist ID</TableCell>
+                      <TableCell>Emergency Type</TableCell>
+                      <TableCell>Priority</TableCell>
+                      <TableCell>Message</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Time</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {recentAlerts.map((alert) => {
+                      const emergencyInfo = getEmergencyTypeInfo(alert.emergencyType);
+                      return (
+                        <TableRow key={alert.alertId}>
+                          <TableCell>
+                            <Typography variant="body2" fontFamily="monospace">
+                              {alert.digitalId}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <span style={{ marginRight: '8px' }}>{emergencyInfo.icon}</span>
+                              <Typography variant="body2" sx={{ color: emergencyInfo.color, fontWeight: 'bold' }}>
+                                {emergencyInfo.label}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            {alert.priority && (
+                              <Chip 
+                                label={alert.priority} 
+                                size="small"
+                                sx={{
+                                  bgcolor: getPriorityColor(alert.priority),
+                                  color: 'white',
+                                  fontSize: '11px'
+                                }}
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {alert.message}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={alert.status} 
+                              color={alert.status === 'ACTIVE' ? 'error' : 'success'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {formatDate(alert.timestamp)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => {
+                                window.open(`https://www.google.com/maps?q=${alert.location.latitude},${alert.location.longitude}`, '_blank');
+                              }}
+                            >
+                              Map
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Users Table */}
         <Card>

@@ -18,6 +18,8 @@ class SocketHandler {
     
     this.connectedUsers = new Map(); // Store user connections
     this.userLocations = new Map(); // Store latest user locations
+    this.emergencyAlerts = new Map(); // Store emergency alerts
+    this.alertCounter = 0; // Track total alerts
     
     this.setupSocketHandlers();
   }
@@ -161,10 +163,16 @@ class SocketHandler {
           return;
         }
 
+        this.alertCounter++; // Increment alert counter
+        const alertId = `ALERT_${Date.now()}_${this.alertCounter}`;
+        
         const emergencyData = {
+          alertId,
           userId: socket.userId,
           digitalId: socket.digitalId,
           type: 'EMERGENCY',
+          emergencyType: this.getEmergencyType(alertData.message), // Extract specific emergency type
+          priority: this.getEmergencyPriority(alertData.message),
           location: alertData.location,
           timestamp: new Date(),
           status: 'ACTIVE',
@@ -172,7 +180,9 @@ class SocketHandler {
         };
 
         // Store emergency alert
+        this.emergencyAlerts.set(alertId, emergencyData);
         console.log(`EMERGENCY ALERT from user ${socket.userId}:`, emergencyData);
+        console.log(`🔍 DEBUG - Emergency Type: ${emergencyData.emergencyType}, Priority: ${emergencyData.priority}`);
 
         // Immediately broadcast to all admins
         this.broadcastToAdmins('emergency_alert', emergencyData);
@@ -180,7 +190,7 @@ class SocketHandler {
         // Send confirmation to user
         socket.emit('emergency_sent', {
           success: true,
-          alertId: `ALERT_${Date.now()}`,
+          alertId: alertId,
           message: 'Emergency alert sent to authorities'
         });
       });
@@ -261,8 +271,75 @@ class SocketHandler {
       totalConnected: this.connectedUsers.size,
       onlineTourists: Array.from(this.connectedUsers.values()).filter(u => u.userType === 'tourist').length,
       onlineAdmins: Array.from(this.connectedUsers.values()).filter(u => u.userType === 'admin').length,
-      totalLocationsTracked: this.userLocations.size
+      totalLocationsTracked: this.userLocations.size,
+      totalAlerts: this.alertCounter,
+      activeAlerts: Array.from(this.emergencyAlerts.values()).filter(a => a.status === 'ACTIVE').length
     };
+  }
+
+  // Get alert statistics
+  getAlertStats() {
+    const allAlerts = Array.from(this.emergencyAlerts.values());
+    const activeAlerts = allAlerts.filter(alert => alert.status === 'ACTIVE');
+    const resolvedAlerts = allAlerts.filter(alert => alert.status === 'RESOLVED');
+    const lastAlert = allAlerts.length > 0 ? 
+      allAlerts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0] : null;
+
+    return {
+      totalAlerts: this.alertCounter,
+      activeAlerts: activeAlerts.length,
+      resolvedAlerts: resolvedAlerts.length,
+      lastAlert
+    };
+  }
+
+  // Get all emergency alerts
+  getEmergencyAlerts() {
+    return Array.from(this.emergencyAlerts.values())
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }
+
+  // Resolve an alert (for admin actions)
+  resolveAlert(alertId) {
+    const alert = this.emergencyAlerts.get(alertId);
+    if (alert) {
+      alert.status = 'RESOLVED';
+      alert.resolvedAt = new Date();
+      this.emergencyAlerts.set(alertId, alert);
+      return true;
+    }
+    return false;
+  }
+
+  // Extract emergency priority from message
+  getEmergencyPriority(message) {
+    const msgLower = message.toLowerCase();
+    if (msgLower.includes('medical') || msgLower.includes('fire') || msgLower.includes('violence') || msgLower.includes('natural_disaster')) {
+      return 'CRITICAL';
+    } else if (msgLower.includes('panic') || msgLower.includes('accident') || msgLower.includes('harassment')) {
+      return 'HIGH';
+    } else if (msgLower.includes('theft') || msgLower.includes('lost')) {
+      return 'MEDIUM';
+    } else {
+      return 'LOW';
+    }
+  }
+
+  // Get emergency type from message
+  getEmergencyType(message) {
+    const msgLower = message.toLowerCase();
+    if (msgLower.startsWith('medical')) return 'medical';
+    if (msgLower.startsWith('fire')) return 'fire';
+    if (msgLower.startsWith('accident')) return 'accident';
+    if (msgLower.startsWith('theft')) return 'theft';
+    if (msgLower.startsWith('harassment')) return 'harassment';
+    if (msgLower.startsWith('lost')) return 'lost';
+    if (msgLower.startsWith('natural_disaster')) return 'natural_disaster';
+    if (msgLower.startsWith('violence')) return 'violence';
+    if (msgLower.startsWith('suspicious_activity')) return 'suspicious_activity';
+    if (msgLower.startsWith('transport')) return 'transport';
+    if (msgLower.startsWith('panic')) return 'panic';
+    return 'other';
   }
 }
 

@@ -33,11 +33,12 @@ export interface LocationData {
 
 export interface EmergencyAlert {
   id?: string;
-  type: 'panic' | 'medical' | 'theft' | 'other';
+  type: 'panic' | 'medical' | 'accident' | 'theft' | 'harassment' | 'lost' | 'natural_disaster' | 'fire' | 'violence' | 'suspicious_activity' | 'transport' | 'other';
   message?: string;
   location: LocationData;
   timestamp?: Date;
   status?: 'sent' | 'received' | 'resolved';
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
 export interface NavigationProps {
